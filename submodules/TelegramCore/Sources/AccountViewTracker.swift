@@ -599,20 +599,22 @@ public final class AccountViewTracker {
                                             return account.postbox.transaction { transaction -> Void in
                                                 for i in 0 ..< messageIds.count {
                                                     if i < viewCounts.count {
-                                                        transaction.updateMessage(messageIds[i], update: { currentMessage in
-                                                            let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
-                                                            var attributes = currentMessage.attributes
-                                                            loop: for j in 0 ..< attributes.count {
-                                                                if let attribute = attributes[j] as? ViewCountMessageAttribute {
-                                                                    if attribute.count >= Int(viewCounts[i]) {
-                                                                        return .skip
+                                                        /*if case let .messageViews(views, forwards) = viewCounts[i] {*/
+                                                        let views = viewCounts[i]
+                                                            transaction.updateMessage(messageIds[i], update: { currentMessage in
+                                                                let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
+                                                                var attributes = currentMessage.attributes
+                                                                loop: for j in 0 ..< attributes.count {
+                                                                    if let attribute = attributes[j] as? ViewCountMessageAttribute {
+                                                                        attributes[j] = ViewCountMessageAttribute(count: max(attribute.count, Int(views)))
                                                                     }
-                                                                    attributes[j] = ViewCountMessageAttribute(count: max(attribute.count, Int(viewCounts[i])))
-                                                                    break loop
+                                                                    /*if let _ = attributes[j] as? ForwardCountMessageAttribute {
+                                                                        attributes[j] = ForwardCountMessageAttribute(count: Int(forwards))
+                                                                    }*/
                                                                 }
-                                                            }
-                                                            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
-                                                        })
+                                                                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                                                            })
+                                                        //}
                                                     }
                                                 }
                                             }
@@ -1318,11 +1320,13 @@ public final class AccountViewTracker {
                 if lhsTimestamp != rhsTimestamp {
                     return false
                 }
+                var lhsVideo = false
                 var lhsMissed = false
                 var lhsOther = false
                 inner: for media in lhs.media {
                     if let action = media as? TelegramMediaAction {
-                        if case let .phoneCall(_, discardReason, _, _) = action.action {
+                        if case let .phoneCall(_, discardReason, _, video) = action.action {
+                            lhsVideo = video
                             if lhs.flags.contains(.Incoming), let discardReason = discardReason, case .missed = discardReason {
                                 lhsMissed = true
                             } else {
@@ -1332,11 +1336,13 @@ public final class AccountViewTracker {
                         }
                     }
                 }
+                var rhsVideo = false
                 var rhsMissed = false
                 var rhsOther = false
                 inner: for media in rhs.media {
                     if let action = media as? TelegramMediaAction {
-                        if case let .phoneCall(_, discardReason, _, _) = action.action {
+                        if case let .phoneCall(_, discardReason, _, video) = action.action {
+                            rhsVideo = video
                             if rhs.flags.contains(.Incoming), let discardReason = discardReason, case .missed = discardReason {
                                 rhsMissed = true
                             } else {
@@ -1346,7 +1352,7 @@ public final class AccountViewTracker {
                         }
                     }
                 }
-                if lhsMissed != rhsMissed || lhsOther != rhsOther {
+                if lhsMissed != rhsMissed || lhsOther != rhsOther || lhsVideo != rhsVideo {
                     return false
                 }
                 return true

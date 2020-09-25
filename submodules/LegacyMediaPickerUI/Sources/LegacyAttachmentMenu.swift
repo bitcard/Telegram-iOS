@@ -127,7 +127,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaO
                     return
                 }
                 
-                DeviceAccess.authorizeAccess(to: .camera, presentationData: context.sharedContext.currentPresentationData.with { $0 }, present: context.sharedContext.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
+                DeviceAccess.authorizeAccess(to: .camera(.video), presentationData: context.sharedContext.currentPresentationData.with { $0 }, present: context.sharedContext.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
                     if value {
                         openCamera(cameraView, controller)
                     }
@@ -141,7 +141,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaO
             if peer is TelegramUser {
                 carouselItem.hasTimer = hasSchedule
             }
-            carouselItem.hasSilentPosting = !isSecretChat
+            carouselItem.hasSilentPosting = true
         }
         carouselItem.hasSchedule = hasSchedule
         carouselItem.reminder = peer.id == context.account.peerId
